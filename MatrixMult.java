@@ -38,15 +38,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  */
 public class MatrixMult {
 
-	private static int I; // Num of Row of MatrixA
-	private static int K; // Num of Row of MatrixB'
-
-	private static int IB; // RowBlock Size of MatrixA
-	private static int KB; // RowBlock Size of MatrixB
-
-	private static int M; // Num of RowBlock of MatrixA
-	private static int N; // Num of RowBlock of MatrixB
-	
 	/*
 	 *  IndexPair Class
 	 *
@@ -113,6 +104,11 @@ public class MatrixMult {
         	String v= strArr[1];
 
             int m = 0;
+
+            // retrieve from configuration
+            int IB 	= Integer.parseInt(context.getConfiguration().get("IB"));
+            int N 	= Integer.parseInt(context.getConfiguration().get("N"));
+
             if(i%IB == 0){
             	m = i/IB; 
             }else{
@@ -140,6 +136,11 @@ public class MatrixMult {
         	int k= Integer.parseInt(strArr[0]);
         	String v= strArr[1];
             int n = 0;
+
+            // retrieve from configuration
+            int KB 	= Integer.parseInt(context.getConfiguration().get("KB"));
+            int M 	= Integer.parseInt(context.getConfiguration().get("M"));
+  
             if(k%KB == 0){
             	n = k/KB; 
             }else{
@@ -156,7 +157,6 @@ public class MatrixMult {
 	 * 
 	 */
     public static class Reduce extends Reducer<MatrixMult.IndexPair, Text, Text, DoubleWritable>{
-    	@SuppressWarnings("unused")
 		@Override
         protected void reduce(MatrixMult.IndexPair key, Iterable<Text> values, Context context) 
         		throws IOException, InterruptedException{
@@ -231,7 +231,35 @@ public class MatrixMult {
     	Date startProc = new Date(System.currentTimeMillis());
     	System.out.println("process started at " + startProc);
     	
-    	Job job = new Job(new Configuration(), "MatrixMultiplication");
+    	Configuration conf = new Configuration();
+        int I = Integer.parseInt(args[3]); // Num of Row of MatrixA
+		int K = Integer.parseInt(args[4]); // Num of Row of MatrixB'
+
+		int IB = Integer.parseInt(args[5]); // RowBlock Size of MatrixA
+		int KB = Integer.parseInt(args[6]); // RowBlock Size of MatrixB'
+		
+		int M =0;
+		if(I%IB == 0){
+			M = I/IB;
+		}else{
+			M = I/IB+1;
+		}
+
+		int N =0;
+		if(K%KB == 0){
+			N = K/KB;
+		}else{
+			N = K/KB+1;
+		}
+		
+    	conf.set("I", args[3]); // Num of Row of MatrixA
+    	conf.set("K", args[4]); // Num of Row of MatrixB'
+    	conf.set("IB", args[5]); // RowBlock Size of MatrixA
+    	conf.set("KB", args[6]); // RowBlock Size of MatrixB'
+    	conf.set("M", new Integer(M).toString());
+    	conf.set("N", new Integer(N).toString());
+    	
+    	Job job = new Job(conf, "MatrixMultiplication");
         job.setJarByClass(MatrixMult.class);
 
         job.setReducerClass(Reduce.class);
@@ -245,23 +273,7 @@ public class MatrixMult {
         MultipleInputs.addInputPath(job, new Path(args[0]), TextInputFormat.class, MapA.class); // matrixA
         MultipleInputs.addInputPath(job, new Path(args[1]), TextInputFormat.class, MapB.class); // matrixB
         FileOutputFormat.setOutputPath(job, new Path(args[2])); // output path
-
-        I = Integer.parseInt(args[3]); // Num of Row of MatrixA
-		K = Integer.parseInt(args[4]); // Num of Row of MatrixB'
-
-		IB = Integer.parseInt(args[5]); // RowBlock Size of MatrixA
-		KB = Integer.parseInt(args[6]); // RowBlock Size of MatrixB'
 		
-		if(I%IB == 0){
-			M = I/IB;
-		}else{
-			M = I/IB+1;
-		}
-		if(K%KB == 0){
-			N = K/KB;
-		}else{
-			N = K/KB+1;
-		}
 		System.out.println("num of MatrixA RowBlock(M) is "+M);
 		System.out.println("num of MatrixB RowBlock(N) is "+N);
 
