@@ -24,10 +24,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  *Å@ Matrix Multiplication on Hadoop Map Reduce
  *
  *   author : tetsuya.odaka@gmail.com
- *   tested on Hadoop1.2
+ *   tested on Hadoop1.2 
  *   
  *   Split the Large Scale Matrix to SubMatrices.
  *   Split size (Number Of Rows or Columns) can be specified by arguments.
+ *   
  *   This should be decided according to your resources.
  *   Partitioner and Conditioner are not implemented here.
  *   Can calculate real numbers (format double) and be expected.
