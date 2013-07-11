@@ -1,3 +1,4 @@
+package com.tetsuyaodaka.hadoop.math.matrix;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -85,6 +86,19 @@ public class MatrixMult {
 			}
 			return 0;
 		}
+
+		/*
+		 * hasHash() is used by HashPartitionar.
+		 */
+		public int hashCode(){
+			int ib = this.index1;
+			int jb = this.index2;
+			int num = ib * Integer.MAX_VALUE + jb;
+			int hash = new Integer(num).hashCode();
+			System.out.println("hash"+hash);
+			return Math.abs(hash);
+		}
+
 	}
 	
 	/*
@@ -169,7 +183,7 @@ public class MatrixMult {
 
     		for(Text value: values){
             	String strVal = value.toString();
-        		
+
             	String mtx;
             	String sRow;
             	String[] strArray = strVal.split(",");
@@ -183,6 +197,8 @@ public class MatrixMult {
 
             	cMap.get(mtx).add(new RowContents(sRow));
             }
+    		
+    		System.out.println("size is "+cMap.get("A").size());
             	
     		for(RowContents ra : cMap.get("A")){
         		for(RowContents rb : cMap.get("B")){
