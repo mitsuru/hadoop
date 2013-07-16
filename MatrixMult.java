@@ -2,6 +2,7 @@ package com.tetsuyaodaka.hadoop.math.matrix;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,7 +23,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
- *@ Matrix Multiplication on Hadoop Map Reduce
+ *ã€€ Matrix Multiplication on Hadoop Map Reduce
  *
  *   author : tetsuya.odaka@gmail.com
  *   tested on Hadoop1.2 
@@ -42,8 +43,8 @@ public class MatrixMult {
 	/*
 	 *  IndexPair Class
 	 *
-	 *@reduce—p‚ÌƒL[‚ğAMatrixA‚ÌsƒuƒƒbƒN”Ô†AMatrixB‚Ì—ñƒuƒƒbƒN”Ô†A—v‘f”Ô†‚É‚·‚éB
-	 *@customized key for reduce function consists of row BlockNum of MatrixA, MatrixB, and number of elements.
+	 *ã€€reduceç”¨ã®ã‚­ãƒ¼ã‚’ã€MatrixAã®è¡Œãƒ–ãƒ­ãƒƒã‚¯ç•ªå·ã€MatrixBã®åˆ—ãƒ–ãƒ­ãƒƒã‚¯ç•ªå·ã€è¦ç´ ç•ªå·ã«ã™ã‚‹ã€‚
+	 *ã€€customized key for reduce function consists of row BlockNum of MatrixA, MatrixB, and number of elements.
 	 *
 	 */
 	public static class IndexPair implements WritableComparable<MatrixMult.IndexPair> {
@@ -95,7 +96,6 @@ public class MatrixMult {
 			int jb = this.index2;
 			int num = ib * Integer.MAX_VALUE + jb;
 			int hash = new Integer(num).hashCode();
-			System.out.println("hash"+hash);
 			return Math.abs(hash);
 		}
 
@@ -104,7 +104,7 @@ public class MatrixMult {
 	/*
 	 *  MapA Class
 	 *
-	 *@Matrix A‚Ìƒf[ƒ^‚ğ“Ç‚İ‚ñ‚ÅAs‚ğƒuƒƒbƒN‚É•ª‰ğ‚·‚éB
+	 *ã€€Matrix Aã®ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚“ã§ã€è¡Œã‚’ãƒ–ãƒ­ãƒƒã‚¯ã«åˆ†è§£ã™ã‚‹ã€‚
 	 *  read MatrixA and decompose it to blocks
 	 *
 	 */
@@ -113,7 +113,7 @@ public class MatrixMult {
         protected void map(LongWritable key, Text value, Context context) 
         		throws IOException, InterruptedException{
 
-        	String strArr[] = value.toString().split(",");
+        	String strArr[] = value.toString().split("\t");
         	int i= Integer.parseInt(strArr[0]);
         	String v= strArr[1];
 
@@ -137,7 +137,7 @@ public class MatrixMult {
 	/*
 	 * MapB Class
 	 * 
-	 *@Matrix B'‚Ìƒf[ƒ^‚ğ“Ç‚İ‚ñ‚ÅAs‚ğƒuƒƒbƒN‚É•ª‰ğ‚·‚éB
+	 *ã€€Matrix B'ã®ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚“ã§ã€è¡Œã‚’ãƒ–ãƒ­ãƒƒã‚¯ã«åˆ†è§£ã™ã‚‹ã€‚
 	 *  read MatrixB and decompose it to blocks
 	 *
 	 */
@@ -146,7 +146,7 @@ public class MatrixMult {
         protected void map(LongWritable key, Text value, Context context) 
         		throws IOException, InterruptedException{
 
-        	String strArr[] = value.toString().split(",");
+        	String strArr[] = value.toString().split("\t");
         	int k= Integer.parseInt(strArr[0]);
         	String v= strArr[1];
             int n = 0;
@@ -197,8 +197,6 @@ public class MatrixMult {
 
             	cMap.get(mtx).add(new RowContents(sRow));
             }
-    		
-    		System.out.println("size is "+cMap.get("A").size());
             	
     		for(RowContents ra : cMap.get("A")){
         		for(RowContents rb : cMap.get("B")){
@@ -208,7 +206,9 @@ public class MatrixMult {
         			for(int i=0;i<ra.lstRow.size();i++){
         				sum += ra.lstRow.get(i)*rb.lstRow.get(i);
         			}
-                    context.write(new Text(indexA + " " + indexB+ " "), new DoubleWritable(sum));
+                    BigDecimal bd = new BigDecimal(sum);
+        			BigDecimal r = bd.setScale(2, BigDecimal.ROUND_HALF_UP); 
+                    context.write(new Text(indexA + " " + indexB+ " "), new DoubleWritable(r.doubleValue()));
         		}
     		}
     			
@@ -285,7 +285,7 @@ public class MatrixMult {
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
 
-        // Mapper‚²‚Æ‚É“Ç‚İ‚Şƒtƒ@ƒCƒ‹‚ğ•Ï‚¦‚éB
+        // Mapperã”ã¨ã«èª­ã¿è¾¼ã‚€ãƒ•ã‚¡ã‚¤ãƒ«ã‚’å¤‰ãˆã‚‹ã€‚
         MultipleInputs.addInputPath(job, new Path(args[0]), TextInputFormat.class, MapA.class); // matrixA
         MultipleInputs.addInputPath(job, new Path(args[1]), TextInputFormat.class, MapB.class); // matrixB
         FileOutputFormat.setOutputPath(job, new Path(args[2])); // output path

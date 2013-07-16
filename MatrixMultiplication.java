@@ -2,15 +2,10 @@ package com.tetsuyaodaka.hadoop.math.matrix;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -26,7 +21,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
- *　 Matrix Multiplication on Hadoop Map Reduce
+ *　 Matrix Multiplication on Hadoop Map Reduce　(Case1)
  *
  *   author : tetsuya.odaka@gmail.com
  *   tested on Hadoop1.2 
@@ -98,7 +93,6 @@ public class MatrixMultiplication {
 			int jb = this.index2;
 			int num = ib * Integer.MAX_VALUE + jb;
 			int hash = new Integer(num).hashCode();
-			System.out.println("hash"+hash);
 			return Math.abs(hash);
 		}
 	}
@@ -176,121 +170,55 @@ public class MatrixMultiplication {
 	 * 
 	 */
     public static class Reduce extends Reducer<MatrixMultiplication.IndexPair, Text, Text, DoubleWritable>{
+
 		@Override
         protected void reduce(MatrixMultiplication.IndexPair key, Iterable<Text> values, Context context) 
         		throws IOException, InterruptedException{
 
-    		Map<Integer,List<Map<String,Object>>> aMap = new HashMap<Integer,List<Map<String,Object>>>();
-    		Map<Integer,List<Map<String,Object>>> bMap = new HashMap<Integer,List<Map<String,Object>>>();
-        	
+    		Map<String,String> aMap = new HashMap<String,String>();
+    		Map<String,String> bMap = new HashMap<String,String>();
+    		
+			int rCount=0;
         	for(Text value: values){
             	String strVal = value.toString();
             	String[] strArray = strVal.split(",");
-            	System.out.println(key.index1);
-            	System.out.println(key.index2);
-            	
-            	System.out.println(strVal);
-
-            	Map<String,Object> tMap = new HashMap<String,Object>();
 
             	if(Integer.parseInt(strArray[0])==0) {
-            		tMap.put("k-index",Integer.parseInt(strArray[2]));
-            		tMap.put("value",Double.parseDouble(strArray[3]));
-            		
-            		if(aMap.get(Integer.parseInt(strArray[1]))==null){
-                		List<Map<String,Object>> aList = new ArrayList<Map<String,Object>>();
-                		aList.add(tMap);
-                		aMap.put(Integer.parseInt(strArray[1]), aList);
-            		}else{
-            			aMap.get(Integer.parseInt(strArray[1])).add(tMap);
-            		}
+            		aMap.put(strArray[1]+" "+strArray[2],strArray[3]);
+            		rCount++;
 
             	}else{
-            		tMap.put("k-index",Integer.parseInt(strArray[1]));
-            		tMap.put("value",Double.parseDouble(strArray[3]));
-
-            		if(bMap.get(Integer.parseInt(strArray[2]))==null){
-            	   		List<Map<String,Object>> bList = new ArrayList<Map<String,Object>>();
-                   		bList.add(tMap);
-                   		bMap.put(Integer.parseInt(strArray[2]), bList);
-            		}else{
-            			bMap.get(Integer.parseInt(strArray[2])).add(tMap);
-            		}
+            		bMap.put(strArray[2]+" "+strArray[1],strArray[3]);
         		}
-            	
         	}
         	
-        	Set<Integer> setA = aMap.keySet();
-        	Set<Integer> sortedSetA = new TreeSet<Integer>(setA);
-        	Set<Integer> setB = bMap.keySet();
-        	Set<Integer> sortedSetB = new TreeSet<Integer>(setB);
+            int is = Integer.parseInt(context.getConfiguration().get("IB"));
+            int js = Integer.parseInt(context.getConfiguration().get("KB"));
 
-        	// aMap内をソート
-        	for(int indexA : sortedSetA){
-        		// Collectionクラスを使ってソート
-            	Collections.sort(aMap.get(indexA), new Comparator<Map<String,Object>>() {
-            		public int compare(Map<String,Object> m1, Map<String,Object> m2) {
-            			int m1Key = Integer.parseInt(m1.get("k-index").toString());
-            			int m2Key = Integer.parseInt(m2.get("k-index").toString());
-            			if (m1Key < m2Key) {
-            				return -1;
-            			} else if (m1Key > m2Key) {
-            				return 1;
-            			}
-            			return 0;
-            			}
-            	});
-            	// 確認
-          		System.out.println("indexA(sorted by k) i=; "+indexA);	
-            	for(int i=0;i<aMap.get(indexA).size();i++){
-              		System.out.println("k-index;"+aMap.get(indexA).get(i).get("k-index"));	
-              		System.out.println("value;"+aMap.get(indexA).get(i).get("value"));	
-            	}
-        	}
+            int im = Integer.parseInt(context.getConfiguration().get("I"));
+            int jm = Integer.parseInt(context.getConfiguration().get("K"));
 
-        	// bMap内をソート
-        	for(int indexB : sortedSetB){
-        		// Collectionクラスを使ってソート
-            	Collections.sort(bMap.get(indexB), new Comparator<Map<String,Object>>() {
-            		public int compare(Map<String,Object> m1, Map<String,Object> m2) {
-            			int m1Key = Integer.parseInt(m1.get("k-index").toString());
-            			int m2Key = Integer.parseInt(m2.get("k-index").toString());
-            			if (m1Key < m2Key) {
-            				return -1;
-            			} else if (m1Key > m2Key) {
-            				return 1;
-            			}
-            			return 0;
-            			}
-            	});
-            	// 確認
-          		System.out.println("indexB(sorted by k) j=; "+indexB);	
-            	for(int i=0;i<bMap.get(indexB).size();i++){
-              		System.out.println("k-index;"+bMap.get(indexB).get(i).get("k-index"));	
-              		System.out.println("value;"+bMap.get(indexB).get(i).get("value"));	
-            	}
+            
+            int startI = (key.index1-1)*is+1;
+            int endI = (key.index1)*is;
+            if(endI>im) endI=im;
+            int startJ = (key.index2-1)*js+1;
+            int endJ = (key.index2)*js;
+            if(endJ>jm) endJ=jm;
 
-        	}
-        	
-    		System.out.println("complete");
-        	for(int indexA : sortedSetA){
-        		List<Map<String,Object>> listKA = aMap.get(indexA);
-            	for(int indexB : sortedSetB){
-            		List<Map<String,Object>> listKB = bMap.get(indexB);
-            		System.out.println("indexA;"+indexA);
-                    System.out.println("indexB;"+indexB);
-            		System.out.println("size of listA;"+listKA.size());
-            		System.out.println("size of listB;"+listKB.size());
-                    double sum = 0;
-                    for(int i=0;i<listKA.size();i++){
-                    	Double aVal = (Double) listKA.get(i).get("value");
-                    	Double bVal = (Double) listKB.get(i).get("value");
-                    	sum += aVal*bVal;
-                    }
-            		System.out.println("result ;"+sum);
-                    context.write(new Text(indexA + " " + indexB), new DoubleWritable(sum));
-            	}
-        	}
+            rCount=rCount/(endI-startI+1);
+            
+            for(int i=startI;i<endI+1;i++){
+                for(int j=startJ;j<endJ+1;j++){
+                	double sum=0;
+                	for(int k=1;k<rCount+1;k++){
+                        sum+=Double.parseDouble(aMap.get(i+" "+k))*Double.parseDouble(bMap.get(j+" "+k));
+                	}
+                    BigDecimal bd = new BigDecimal(sum);
+        			BigDecimal r = bd.setScale(2, BigDecimal.ROUND_HALF_UP); 
+                	context.write(new Text(i + " " + j), new DoubleWritable(r.doubleValue()));
+                }
+            }
         }
     }
 
