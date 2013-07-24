@@ -2,7 +2,9 @@ package com.tetsuyaodaka.hadoop.math.matrix;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -32,18 +34,20 @@ public class CorrelationCoefficient {
     public static class MapAll extends Mapper<LongWritable, Text, IntWritable, Text>{
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
-           	String strArr[] = value.toString().split("\t");
-        	String keyArr[] = strArr[0].split(" ");
-            // retrieve from configuration
-            String dir 	= context.getConfiguration().get("direction");	
 
-        	int var= 0;
-            if(dir.equals("b")){
-            	var= Integer.parseInt(keyArr[1]);
+        	String strArr[] = value.toString().split("\t");
+        	int i= Integer.parseInt(strArr[0]);
+//        	String v= strArr[1];
+
+            int m = 0;
+            // retrieve from configuration
+            int IB 	= Integer.parseInt(context.getConfiguration().get("IB"));
+            if(i%IB == 0){
+            	m = i/IB; 
             }else{
-            	var= Integer.parseInt(keyArr[0]);
+            	m = i/IB + 1;             	
             }
-            context.write(new IntWritable(var), value);
+            context.write(new IntWritable(m), value);
         }
     }
 
@@ -55,49 +59,66 @@ public class CorrelationCoefficient {
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
             String line = value.toString();
             String[] strArr = line.split("\t");
-            int oKey = Integer.parseInt(strArr[0]); // number of column
-            value = new Text(strArr[1]+" diag");
-    		context.write(new IntWritable(oKey), value);
+            int i = Integer.parseInt(strArr[0]); // number of column
+            value = new Text(line + " diag");
+
+            int m = 0;
+            // retrieve from configuration
+            int IB 	= Integer.parseInt(context.getConfiguration().get("IB"));
+            if(i%IB == 0){
+            	m = i/IB; 
+            }else{
+            	m = i/IB + 1;             	
+            }
+            context.write(new IntWritable(m), value);
         }
     }
 
     public static class Reduce extends Reducer<IntWritable, Text, Text, DoubleWritable>{
-    	@Override
+		@Override
     	protected void reduce(IntWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException{
+        	Map<Integer,Double> diagMap = new HashMap<Integer,Double>();
         	double diag = 0;
-        	List<String> list = new ArrayList<String>();
-            for(Text value: values){
+        	int i = 0;
+        	List<String> lines = new ArrayList<String>();
+        	
+        	for(Text value: values){
             	String line = value.toString();
             	if(line.indexOf("diag")!=-1){
-                    String[] strArr = line.split(" ");
+                    String[] keyArr = line.split("\t");
+                    String[] strArr = keyArr[1].split(" ");
                     diag = Double.parseDouble(strArr[0]);
+                    diagMap.put(Integer.parseInt(keyArr[0]), diag);
             	} else {
-            		list.add(line);
+            		lines.add(line);
             	}
             }
-            
-            for(int i=0;i<list.size();i++){
-                String l=list.get(i);
-               	String strArr[] = l.split("\t");
-            	double var= Double.parseDouble(strArr[1]);	// number of column
-            	var *= diag;
-                BigDecimal bd = new BigDecimal(var);
-    			BigDecimal r = bd.setScale(2, BigDecimal.ROUND_HALF_UP); 
-                context.write(new Text(strArr[0]), new DoubleWritable(r.doubleValue()));
-            }
+        	
+        	for(i=0;i<lines.size();i++){
+               	String keyArr[] = lines.get(i).split("\t");
+//        		System.out.println(lines.get(i));
+        		int numRow = Integer.parseInt(keyArr[0]);
+        		diag = diagMap.get(numRow);
+               	String strArr[] = keyArr[1].split(" ");
+            	for(int j=0;j<strArr.length;j++){
+                	double var= Double.parseDouble(strArr[j]);	// number of column
+                	var *= diag;
+                    BigDecimal bd = new BigDecimal(var);
+        			BigDecimal r = bd.setScale(2, BigDecimal.ROUND_HALF_UP); 
+                    context.write(new Text(numRow + " " + (j+1)), new DoubleWritable(r.doubleValue()));
+            	}
+        	}
         }
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
     	Configuration conf = new Configuration();
-        if(args[3].equals("b")){
-        	conf.set("direction", "b"); // backward
-        }else{
-        	conf.set("direction", "f"); // forward
-        }
+    	conf.set("I", args[3]); // Num of Row (=Columns)
+    	conf.set("IB", args[4]); // RowBlock Size of Matrix
         
     	Job job = new Job(conf, "CalculateCC");
-        job.setJarByClass(CorrelationCoefficient.class);
+
+    	job.setJarByClass(CorrelationCoefficient.class);
 
         job.setReducerClass(Reduce.class);
 

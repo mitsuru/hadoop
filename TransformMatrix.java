@@ -54,10 +54,10 @@ public class TransformMatrix {
             boolean tr 	= Boolean.parseBoolean(context.getConfiguration().get("transpose"));	// row block size
 
             if(tr){
-            	int n= Integer.parseInt(keyArr[0]);	// number of column
+            	int n= Integer.parseInt(keyArr[1]);	// number of column
             	context.write(new IntWritable(n), value);
             }else{
-            	int n= Integer.parseInt(keyArr[1]);	// number of row
+            	int n= Integer.parseInt(keyArr[0]);	// number of row
             	context.write(new IntWritable(n), value);
             }
         }
@@ -88,10 +88,10 @@ public class TransformMatrix {
     			BigDecimal r = bd.setScale(2, BigDecimal.ROUND_HALF_UP); 
 
     			if(tr) {
-            		aMap.put(Integer.parseInt(keyArr[1]),r.doubleValue());
+            		aMap.put(Integer.parseInt(keyArr[0]),r.doubleValue());
 
             	}else{
-            		aMap.put(Integer.parseInt(keyArr[0]),r.doubleValue());
+            		aMap.put(Integer.parseInt(keyArr[1]),r.doubleValue());
         		}
         	}
 
