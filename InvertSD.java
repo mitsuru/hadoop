@@ -16,9 +16,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
  *
- * InvertSDクラス
+ * InvertSD繧ｯ繝ｩ繧ｹ
  * 
- * 標準偏差の逆数を計算する。
+ * 讓呎ｺ門￥蟾ｮ縺ｮ騾�謨ｰ繧定ｨ育ｮ励☆繧九�
  * 
  */
 public class InvertSD {

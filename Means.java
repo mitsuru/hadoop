@@ -17,9 +17,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
  *
- * MeansƒNƒ‰ƒX
+ * Meansã‚¯ãƒ©ã‚¹
  * 
- * ŠÏ‘ª’ls—ñ‚ÌŠe•Ï—Êi—ñj‚É‚Â‚¢‚ÄA•W–{•½‹Ï‚ğŒvZ‚·‚éB
+ * è¦³æ¸¬å€¤è¡Œåˆ—ã®å„å¤‰é‡ï¼ˆåˆ—ï¼‰ã«ã¤ã„ã¦ã€æ¨™æœ¬å¹³å‡ã‚’è¨ˆç®—ã™ã‚‹ã€‚
  * 
  */
 public class Means {
